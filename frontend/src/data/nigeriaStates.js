@@ -1,0 +1,45 @@
+// Nigeria states with approximate centroid coordinates and emission allocation.
+// Since sub-national CO2 data doesn't exist, emissions are allocated proportionally
+// based on population and industrial activity estimates.
+
+const nigeriaStates = [
+  { name: "Abia", lat: 5.45, lng: 7.52, popShare: 0.019, zone: "South East" },
+  { name: "Adamawa", lat: 9.33, lng: 12.40, popShare: 0.018, zone: "North East" },
+  { name: "Akwa Ibom", lat: 5.01, lng: 7.93, popShare: 0.027, zone: "South South" },
+  { name: "Anambra", lat: 6.22, lng: 6.94, popShare: 0.025, zone: "South East" },
+  { name: "Bauchi", lat: 10.31, lng: 9.84, popShare: 0.030, zone: "North East" },
+  { name: "Bayelsa", lat: 4.77, lng: 6.07, popShare: 0.010, zone: "South South" },
+  { name: "Benue", lat: 7.34, lng: 8.77, popShare: 0.027, zone: "North Central" },
+  { name: "Borno", lat: 11.85, lng: 13.15, popShare: 0.026, zone: "North East" },
+  { name: "Cross River", lat: 5.87, lng: 8.60, popShare: 0.018, zone: "South South" },
+  { name: "Delta", lat: 5.53, lng: 5.90, popShare: 0.027, zone: "South South" },
+  { name: "Ebonyi", lat: 6.26, lng: 8.07, popShare: 0.014, zone: "South East" },
+  { name: "Edo", lat: 6.63, lng: 5.93, popShare: 0.020, zone: "South South" },
+  { name: "Ekiti", lat: 7.72, lng: 5.31, popShare: 0.016, zone: "South West" },
+  { name: "Enugu", lat: 6.53, lng: 7.49, popShare: 0.020, zone: "South East" },
+  { name: "FCT Abuja", lat: 9.06, lng: 7.49, popShare: 0.019, zone: "North Central" },
+  { name: "Gombe", lat: 10.29, lng: 11.17, popShare: 0.015, zone: "North East" },
+  { name: "Imo", lat: 5.49, lng: 7.03, popShare: 0.025, zone: "South East" },
+  { name: "Jigawa", lat: 12.23, lng: 9.56, popShare: 0.028, zone: "North West" },
+  { name: "Kaduna", lat: 10.52, lng: 7.43, popShare: 0.039, zone: "North West" },
+  { name: "Kano", lat: 12.00, lng: 8.52, popShare: 0.057, zone: "North West" },
+  { name: "Katsina", lat: 12.99, lng: 7.60, popShare: 0.035, zone: "North West" },
+  { name: "Kebbi", lat: 12.45, lng: 4.20, popShare: 0.020, zone: "North West" },
+  { name: "Kogi", lat: 7.73, lng: 6.69, popShare: 0.020, zone: "North Central" },
+  { name: "Kwara", lat: 8.97, lng: 4.39, popShare: 0.015, zone: "North Central" },
+  { name: "Lagos", lat: 6.52, lng: 3.38, popShare: 0.060, zone: "South West" },
+  { name: "Nasarawa", lat: 8.54, lng: 8.52, popShare: 0.012, zone: "North Central" },
+  { name: "Niger", lat: 9.93, lng: 5.60, popShare: 0.026, zone: "North Central" },
+  { name: "Ogun", lat: 7.16, lng: 3.35, popShare: 0.023, zone: "South West" },
+  { name: "Ondo", lat: 7.10, lng: 5.20, popShare: 0.022, zone: "South West" },
+  { name: "Osun", lat: 7.56, lng: 4.52, popShare: 0.022, zone: "South West" },
+  { name: "Oyo", lat: 8.12, lng: 3.42, popShare: 0.035, zone: "South West" },
+  { name: "Plateau", lat: 9.22, lng: 9.52, popShare: 0.019, zone: "North Central" },
+  { name: "Rivers", lat: 4.84, lng: 6.92, popShare: 0.035, zone: "South South" },
+  { name: "Sokoto", lat: 13.06, lng: 5.24, popShare: 0.023, zone: "North West" },
+  { name: "Taraba", lat: 7.87, lng: 10.77, popShare: 0.015, zone: "North East" },
+  { name: "Yobe", lat: 12.29, lng: 11.44, popShare: 0.015, zone: "North East" },
+  { name: "Zamfara", lat: 12.17, lng: 6.25, popShare: 0.021, zone: "North West" },
+];
+
+export default nigeriaStates;

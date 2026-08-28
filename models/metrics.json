@@ -1,0 +1,93 @@
+{
+  "random_forest": {
+    "test": {
+      "r2": -3.307,
+      "mae": 18.108,
+      "rmse": 19.9668
+    },
+    "validation": {
+      "r2": 0.4026,
+      "mae": 4.5638,
+      "rmse": 5.9573
+    }
+  },
+  "xgboost": {
+    "test": {
+      "r2": -1.6266,
+      "mae": 13.6541,
+      "rmse": 15.5924
+    },
+    "validation": {
+      "r2": 0.8914,
+      "mae": 1.8211,
+      "rmse": 2.5397
+    },
+    "best_params": {
+      "learning_rate": 0.04890031031719742,
+      "max_depth": 4,
+      "n_estimators": 439,
+      "subsample": 0.8086755089227238,
+      "colsample_bytree": 0.6831127380669757,
+      "reg_alpha": 8.434438945864988e-06,
+      "reg_lambda": 3.938271326982581e-08,
+      "min_child_weight": 1
+    }
+  },
+  "lstm": {
+    "test": {
+      "r2": -7.3053,
+      "mae": 25.9702,
+      "rmse": 27.7266
+    },
+    "validation": {
+      "r2": -0.6747,
+      "mae": 7.3809,
+      "rmse": 9.9742
+    }
+  },
+  "backtest": {
+    "r2": -3.711,
+    "mae": 15.8316,
+    "rmse": 17.7286
+  },
+  "feature_columns": [
+    "coal_co2",
+    "oil_co2",
+    "gas_co2",
+    "flaring_co2",
+    "cement_co2",
+    "other_industry_co2",
+    "population",
+    "gdp",
+    "primary_energy_consumption",
+    "energy_per_capita",
+    "energy_per_gdp",
+    "gdp_current_usd",
+    "gdp_constant_usd",
+    "gdp_per_capita",
+    "population_total",
+    "population_growth_pct",
+    "energy_use_per_capita",
+    "electricity_access_pct",
+    "renewable_energy_pct",
+    "industry_value_added_pct_gdp",
+    "energy_co2",
+    "oil_transport_co2",
+    "industrial_co2",
+    "energy_share",
+    "oil_transport_share",
+    "flaring_share",
+    "industrial_share",
+    "co2_lag1",
+    "co2_lag2",
+    "co2_lag3",
+    "co2_roll_3yr",
+    "co2_roll_5yr",
+    "fossil_fuel_share",
+    "gdp_pop_interaction",
+    "gdp_yoy_growth",
+    "pop_yoy_growth",
+    "energy_intensity"
+  ],
+  "best_model": "xgboost"
+}

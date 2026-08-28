@@ -1,0 +1,13 @@
+state,year,climatetrace_co2_mt,top_sector,facilities_count,estimated_co2_mt,region,abs_diff_mt,pct_variance,classification
+Rivers,2022,21.85,Oil & Gas Flaring / Refining,142,13.885,South South,-7.97,-36.5,Under-estimated (-)
+Delta,2022,16.2,Oil & Gas Extraction / Flaring,118,9.697,South South,-6.5,-40.1,Under-estimated (-)
+Lagos,2022,17.4,Road Transport & Domestic Aviation,89,11.313,South West,-6.09,-35.0,Under-estimated (-)
+Akwa Ibom,2022,11.5,Petroleum & Gas Systems,64,7.493,South South,-4.01,-34.8,Under-estimated (-)
+Kano,2022,8.95,Manufacturing & Residential,45,6.097,North West,-2.85,-31.9,Under-estimated (-)
+Ogun,2022,8.6,Heavy Industry & Cement (Ewekoro/Sagamu),52,4.996,South West,-3.6,-41.9,Under-estimated (-)
+Kaduna,2022,6.8,"Refining, Transport & Ag Burning",38,4.555,North West,-2.24,-33.0,Under-estimated (-)
+Oyo,2022,6.4,Transport & Food Processing,31,4.261,South West,-2.14,-33.4,Under-estimated (-)
+FCT Abuja,2022,5.4,Urban Road Transport & Commercial,28,3.6,North Central,-1.8,-33.3,Under-estimated (-)
+Bauchi,2022,3.72,"Agricultural Burning, Land Use & Waste",19,2.292,North East,-1.43,-38.4,Under-estimated (-)
+Kogi,2022,4.1,Obajana Cement Industry & Transport,22,2.351,North Central,-1.75,-42.7,Under-estimated (-)
+Borno,2022,3.1,"Land Use, Livestock & Off-grid Diesel",14,1.984,North East,-1.12,-36.0,Under-estimated (-)
