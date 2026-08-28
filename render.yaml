@@ -1,0 +1,32 @@
+services:
+  # 1. FastAPI REST Backend Web Service
+  - type: web
+    name: ismpce-backend
+    runtime: python
+    region: frankfurt  # (or oregon/ohio/singapore)
+    plan: free
+    buildCommand: "pip install --upgrade pip && pip install -r backend/requirements.txt"
+    startCommand: "uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: PORT
+        value: 10000
+
+  # 2. React Vite Frontend Static Site
+  - type: static_site
+    name: ismpce-frontend
+    region: frankfurt
+    plan: free
+    buildCommand: "npm --prefix frontend install && npm --prefix frontend run build"
+    publishPath: "frontend/dist"
+    routes:
+      - type: rewrite
+        source: "/*"
+        destination: "/index.html"
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: ismpce-backend
+          property: host
