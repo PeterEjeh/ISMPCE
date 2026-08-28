@@ -13,12 +13,10 @@ services:
       - key: PORT
         value: 10000
 
-  # 2. React Vite Frontend (Static Site on Render)
+  # 2. React Vite Frontend (Global CDN Static Site)
   - type: web
     name: ismpce-frontend
     runtime: static
-    region: frankfurt
-    plan: free
     buildCommand: "npm --prefix frontend install && npm --prefix frontend run build"
     staticPublishPath: "frontend/dist"
     routes:
