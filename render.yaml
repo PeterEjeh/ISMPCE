@@ -13,7 +13,7 @@ services:
       - key: PORT
         value: 10000
 
-  # 2. React Vite Frontend (Global CDN Static Site)
+  # 2. React Vite Frontend (Global Edge CDN)
   - type: web
     name: ismpce-frontend
     runtime: static
@@ -25,7 +25,4 @@ services:
         destination: "/index.html"
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: ismpce-backend
-          property: host
+        value: https://ismpce-backend.onrender.com

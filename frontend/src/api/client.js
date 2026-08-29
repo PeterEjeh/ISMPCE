@@ -1,20 +1,32 @@
 import axios from "axios";
 
-// Handle VITE_API_URL gracefully whether provided with or without https://
+// Determine API Base URL
 let rawBase = import.meta.env.VITE_API_URL || "";
+
+// If Render passed the internal service name 'ismpce-backend', fix it to the public domain
+if (rawBase === "ismpce-backend" || rawBase === "https://ismpce-backend" || rawBase === "http://ismpce-backend") {
+  rawBase = "https://ismpce-backend.onrender.com";
+}
+
 if (rawBase && !rawBase.startsWith("http://") && !rawBase.startsWith("https://")) {
   rawBase = `https://${rawBase}`;
 }
+
 rawBase = rawBase.replace(/\/+$/, "");
 
-const API_BASE = rawBase || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "/api");
+// Fallback to production Render backend if running on static production host without env
+const API_BASE =
+  rawBase ||
+  (import.meta.env.DEV
+    ? "http://127.0.0.1:8000"
+    : "https://ismpce-backend.onrender.com");
 
 console.log("[ISMPCE Client] Connecting to API Base:", API_BASE);
 
 const api = axios.create({
   baseURL: API_BASE,
   headers: { "Content-Type": "application/json" },
-  timeout: 45000, // 45s to allow for Render free tier cold starts
+  timeout: 45000,
 });
 
 export async function fetchEmissions(params = {}) {
