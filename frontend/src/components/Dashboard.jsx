@@ -4,7 +4,6 @@ import MapView from "./MapView";
 import TimeSeriesChart from "./TimeSeriesChart";
 import SectorCharts from "./SectorCharts";
 import ModelComparison from "./ModelComparison";
-import PredictionPanel from "./PredictionPanel";
 import ScenarioSimulator from "./ScenarioSimulator";
 
 export default function Dashboard() {
@@ -98,11 +97,6 @@ export default function Dashboard() {
     };
   }, [retryCount]);
 
-  const handlePrediction = (data) => {
-    setForecast(data.forecast);
-    setScenarioForecast([]);
-  };
-
   const handleScenarioResult = (data) => {
     if (!data) {
       setScenarioForecast([]);
@@ -111,6 +105,9 @@ export default function Dashboard() {
     if (data.has_scenario) {
       setScenarioForecast(data.forecast);
       setForecast(data.forecast);
+    } else {
+      setForecast(data.forecast);
+      setScenarioForecast([]);
     }
   };
 
@@ -211,16 +208,11 @@ export default function Dashboard() {
         </div>
 
         {/* Model comparison */}
-        <div className="grid-span-1">
+        <div className="grid-span-2">
           <ModelComparison metrics={metrics} />
         </div>
 
-        {/* Prediction panel */}
-        <div className="grid-span-1">
-          <PredictionPanel onPrediction={handlePrediction} />
-        </div>
-
-        {/* Scenario Simulator */}
+        {/* Scenario Simulator — primary interactive predictive engine */}
         <div className="grid-span-2">
           <ScenarioSimulator onScenarioResult={handleScenarioResult} />
         </div>
