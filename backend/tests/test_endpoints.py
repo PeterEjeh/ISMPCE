@@ -75,10 +75,10 @@ def test_predict_endpoint_default():
 
 
 def test_predict_endpoint_specific_models():
-    """Test predictions using specific models: random_forest, xgboost, lstm."""
+    """Test predictions using specific national models: random_forest, xgboost, lstm."""
     for model_name in ["random_forest", "xgboost", "lstm"]:
         payload = {
-            "region": "Bauchi",
+            "region": "Nigeria",
             "forecast_horizon": 3,
             "model_name": model_name
         }
@@ -87,6 +87,20 @@ def test_predict_endpoint_specific_models():
         data = response.json()
         assert data["model_used"] == model_name
         assert len(data["forecast"]) == 3
+
+
+def test_predict_endpoint_state_level():
+    """Test state-level prediction (e.g. Bauchi)."""
+    payload = {
+        "region": "Bauchi",
+        "forecast_horizon": 3,
+        "model_name": "xgboost"
+    }
+    response = client.post("/predict", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "Bauchi" in data["model_used"]
+    assert len(data["forecast"]) == 3
 
 
 def test_models_metrics():

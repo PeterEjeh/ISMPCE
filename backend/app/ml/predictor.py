@@ -13,7 +13,8 @@ from ..config import DATA_DIR, MODELS_DIR
 from .loader import get_best_model_name, get_models
 
 STATE_MODELS_DIR = os.path.join(MODELS_DIR, "state_models")
-STATE_DATA_PATH = os.path.join(DATA_DIR, "processed", "state_emissions_features.csv")
+_direct_state_data = os.path.join(DATA_DIR, "state_emissions_features.csv")
+STATE_DATA_PATH = _direct_state_data if os.path.exists(_direct_state_data) else os.path.join(DATA_DIR, "processed", "state_emissions_features.csv")
 
 
 def _load_state_metadata():
