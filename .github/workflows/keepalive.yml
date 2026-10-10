@@ -1,0 +1,26 @@
+name: Render Backend Keepalive
+
+# Pings the Render backend on a recurring schedule to prevent it from sleeping (no cold starts)
+on:
+  schedule:
+    # Runs every 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allows manual trigger from the Actions tab
+
+jobs:
+  keepalive:
+    name: Ping Render Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping API Root
+        env:
+          TARGET_URL: ${{ vars.BACKEND_URL || 'https://ismpce-backend.onrender.com' }}
+        run: |
+          echo "Pinging ${TARGET_URL}/ ..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "${TARGET_URL}/" || echo "000")
+          echo "Response code: ${HTTP_STATUS}"
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
+            echo "Backend is alive and responding!"
+          else
+            echo "Warning: Response code was ${HTTP_STATUS}"
+          fi
