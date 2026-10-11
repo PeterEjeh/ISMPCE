@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchEmissions, fetchPrediction, fetchModelMetrics, fetchStatesContribution } from "../api/client";
+import { cleanRegionName, isNationalRegion } from "../constants/regions";
 import MapView from "./MapView";
 import TimeSeriesChart from "./TimeSeriesChart";
 import SectorCharts from "./SectorCharts";
@@ -7,7 +8,11 @@ import ModelComparison from "./ModelComparison";
 import ScenarioSimulator from "./ScenarioSimulator";
 
 export default function Dashboard() {
-  const [emissions, setEmissions] = useState([]);
+  const [nationalEmissions, setNationalEmissions] = useState([]);
+  const [currentHistorical, setCurrentHistorical] = useState([]);
+  const [currentRegion, setCurrentRegion] = useState("Nigeria (National)");
+  const [chartLoading, setChartLoading] = useState(false);
+
   const [sectorEmissions, setSectorEmissions] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [forecast, setForecast] = useState([]);
@@ -44,13 +49,14 @@ export default function Dashboard() {
         if (!isMounted) return;
 
         // Separate national-level from sector-level records
-        const national = emissionsRes.data.filter((d) => !d.sector);
-        const sectors = emissionsRes.data.filter((d) => d.sector);
+        const national = (emissionsRes.data || []).filter((d) => !d.sector);
+        const sectors = (emissionsRes.data || []).filter((d) => d.sector);
 
-        setEmissions(national);
+        setNationalEmissions(national);
+        setCurrentHistorical(national);
         setSectorEmissions(sectors);
         setMetrics(metricsRes);
-        setForecast(forecastRes.forecast);
+        setForecast(forecastRes.forecast || []);
         setStateContributions(statesRes.states || []);
 
         // Compute summary stats
@@ -97,11 +103,60 @@ export default function Dashboard() {
     };
   }, [retryCount]);
 
-  const handleScenarioResult = (data) => {
+  // Handle region switch from TimeSeriesChart or ScenarioSimulator
+  const handleRegionChange = async (newRegion) => {
+    if (newRegion === currentRegion) return;
+    setCurrentRegion(newRegion);
+    setChartLoading(true);
+
+    const isNat = isNationalRegion(newRegion);
+    const clean = cleanRegionName(newRegion);
+
+    try {
+      // 1. Fetch accurate historical emissions for this target
+      if (isNat) {
+        setCurrentHistorical(nationalEmissions);
+      } else {
+        const res = await fetchEmissions({ state: clean });
+        const records = (res.data || []).filter((d) => !d.sector);
+        setCurrentHistorical(records);
+      }
+
+      // 2. Fetch baseline forecast for this target
+      const predRes = await fetchPrediction(isNat ? "Nigeria" : clean, 5);
+      setForecast(predRes.forecast || []);
+      setScenarioForecast([]);
+    } catch (err) {
+      console.error("Failed to load region data:", err);
+    } finally {
+      setChartLoading(false);
+    }
+  };
+
+  const handleScenarioResult = async (data, selectedRegion) => {
     if (!data) {
       setScenarioForecast([]);
       return;
     }
+
+    const reg = selectedRegion || data.region || currentRegion;
+    if (reg !== currentRegion) {
+      setCurrentRegion(reg);
+      const isNat = isNationalRegion(reg);
+      const clean = cleanRegionName(reg);
+      try {
+        if (isNat) {
+          setCurrentHistorical(nationalEmissions);
+        } else {
+          const res = await fetchEmissions({ state: clean });
+          const records = (res.data || []).filter((d) => !d.sector);
+          setCurrentHistorical(records);
+        }
+      } catch (err) {
+        console.warn("Could not load state historical emissions:", err);
+      }
+    }
+
     if (data.has_scenario) {
       setScenarioForecast(data.forecast);
       setForecast(data.forecast);
@@ -191,9 +246,12 @@ export default function Dashboard() {
         {/* Time series chart */}
         <div className="grid-span-2">
           <TimeSeriesChart
-            historical={emissions}
+            historical={currentHistorical}
             forecast={forecast}
             scenarioForecast={scenarioForecast}
+            region={currentRegion}
+            onRegionChange={handleRegionChange}
+            loading={chartLoading}
           />
         </div>
 
@@ -214,7 +272,11 @@ export default function Dashboard() {
 
         {/* Scenario Simulator — primary interactive predictive engine */}
         <div className="grid-span-2">
-          <ScenarioSimulator onScenarioResult={handleScenarioResult} />
+          <ScenarioSimulator
+            onScenarioResult={handleScenarioResult}
+            selectedRegion={currentRegion}
+            onRegionChange={handleRegionChange}
+          />
         </div>
       </div>
 

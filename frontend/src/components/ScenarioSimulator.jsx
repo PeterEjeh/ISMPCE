@@ -1,22 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { fetchPrediction } from "../api/client";
-
-// Only empirical/validated states from Climate TRACE & EDGAR datasets + National
-const AVAILABLE_REGIONS = [
-  "Nigeria (National)",
-  "Bauchi (Case Study)",
-  "Lagos",
-  "Rivers",
-  "Delta",
-  "Akwa Ibom",
-  "Kano",
-  "Ogun",
-  "Kaduna",
-  "Oyo",
-  "FCT Abuja",
-  "Kogi",
-  "Borno",
-];
+import { NIGERIA_REGIONS, cleanRegionName, isNationalRegion } from "../constants/regions";
 
 const PRESETS = [
   {
@@ -37,8 +21,12 @@ const PRESETS = [
   },
 ];
 
-export default function ScenarioSimulator({ onScenarioResult }) {
-  const [region, setRegion] = useState("Nigeria (National)");
+export default function ScenarioSimulator({
+  onScenarioResult,
+  selectedRegion = "Nigeria (National)",
+  onRegionChange,
+}) {
+  const [region, setRegionState] = useState(selectedRegion);
   const [horizon, setHorizon] = useState(5);
   const [model, setModel] = useState("");
   const [fossilChange, setFossilChange] = useState(0);
@@ -47,6 +35,20 @@ export default function ScenarioSimulator({ onScenarioResult }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
+
+  // Sync external region changes
+  useEffect(() => {
+    if (selectedRegion && selectedRegion !== region) {
+      setRegionState(selectedRegion);
+    }
+  }, [selectedRegion]);
+
+  const handleRegionSelect = (newRegion) => {
+    setRegionState(newRegion);
+    if (onRegionChange) {
+      onRegionChange(newRegion);
+    }
+  };
 
   const applyPreset = (preset) => {
     if (preset.values.fossil_fuel_share_change != null)
@@ -63,7 +65,7 @@ export default function ScenarioSimulator({ onScenarioResult }) {
     setPopGrowth(0);
     setResult(null);
     setError(null);
-    if (onScenarioResult) onScenarioResult(null);
+    if (onScenarioResult) onScenarioResult(null, region);
   };
 
   const handleSubmit = async (e) => {
@@ -78,10 +80,7 @@ export default function ScenarioSimulator({ onScenarioResult }) {
         population_growth_rate: popGrowth !== 0 ? popGrowth : null,
       };
 
-      // Clean region name for API
-      let apiRegion = region;
-      if (region === "Nigeria (National)") apiRegion = "Nigeria";
-      else if (region === "Bauchi (Case Study)") apiRegion = "Bauchi";
+      const apiRegion = cleanRegionName(region);
 
       const data = await fetchPrediction(
         apiRegion,
@@ -90,7 +89,7 @@ export default function ScenarioSimulator({ onScenarioResult }) {
         scenarioParams
       );
       setResult(data);
-      if (onScenarioResult) onScenarioResult(data);
+      if (onScenarioResult) onScenarioResult(data, region);
     } catch (err) {
       setError(err.response?.data?.detail || "Scenario request failed");
     } finally {
@@ -98,7 +97,7 @@ export default function ScenarioSimulator({ onScenarioResult }) {
     }
   };
 
-  const isStateSelected = region !== "Nigeria (National)" && region !== "Nigeria";
+  const isStateSelected = !isNationalRegion(region);
 
   return (
     <div className="card scenario-card">
@@ -140,11 +139,14 @@ export default function ScenarioSimulator({ onScenarioResult }) {
               id="scen-region"
               className="form-select"
               value={region}
-              onChange={(e) => setRegion(e.target.value)}
+              onChange={(e) => handleRegionSelect(e.target.value)}
             >
-              {AVAILABLE_REGIONS.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
+              <option value="Nigeria (National)">🇳🇬 Nigeria (National)</option>
+              <optgroup label="Trained Empirical States (Climate TRACE &amp; EDGAR)">
+                {NIGERIA_REGIONS.filter((s) => !s.includes("National")).map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </optgroup>
             </select>
           </div>
           <div className="form-group">
@@ -180,11 +182,11 @@ export default function ScenarioSimulator({ onScenarioResult }) {
         <div className="scenario-badge-box">
           {isStateSelected ? (
             <span className="state-mode-badge active">
-              ✓ <strong>State-Level Model Active:</strong> Running machine learning model trained on empirical <em>{region}</em> observations (Climate TRACE &amp; EDGAR gridded timeseries).
+              ✓ <strong>State-Level Model Active:</strong> Running machine learning model calibrated for <em>{cleanRegionName(region)}</em> observations (Climate TRACE &amp; EDGAR gridded timeseries).
             </span>
           ) : (
             <span className="state-mode-badge national">
-              🏛 <strong>National Master Model Active:</strong> Running national macro model trained on Nigeria OWID/World Bank historical dataset.
+              🏛 <strong>National Master Model Active:</strong> Running national macro model trained on Nigeria historical dataset.
             </span>
           )}
         </div>
@@ -278,17 +280,19 @@ export default function ScenarioSimulator({ onScenarioResult }) {
                   return (
                     <tr key={f.year}>
                       <td><strong>{f.year}</strong></td>
-                      <td>{f.predicted_co2}</td>
+                      <td>{f.predicted_co2 != null ? Number(f.predicted_co2).toFixed(2) : "-"}</td>
                       {result.has_scenario && (
-                        <td className="scenario-cell">{f.scenario_co2 ?? "-"}</td>
+                        <td className="scenario-cell">
+                          {f.scenario_co2 != null ? Number(f.scenario_co2).toFixed(2) : "-"}
+                        </td>
                       )}
                       {result.has_scenario && (
                         <td className={diff < 0 ? "diff-negative" : "diff-positive"}>
                           {diff !== null ? (diff > 0 ? "+" : "") + diff + " Mt" : "-"}
                         </td>
                       )}
-                      <td>{f.confidence_lower}</td>
-                      <td>{f.confidence_upper}</td>
+                      <td>{f.confidence_lower != null ? Number(f.confidence_lower).toFixed(2) : "-"}</td>
+                      <td>{f.confidence_upper != null ? Number(f.confidence_upper).toFixed(2) : "-"}</td>
                     </tr>
                   );
                 })}
