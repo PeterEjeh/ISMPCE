@@ -316,6 +316,16 @@ def predict_emissions(
         _bias_correction = 0.0
     # ---------------------------------------------------------------------------
 
+    # --- Recent trend (linear) -------------------------------------------------
+    # Tree models cannot extrapolate — they flatline in multi-step forecasts.
+    # Compute a linear trend from the last 5 observed years to blend with the
+    # model output so the baseline evolves rather than staying constant.
+    _trend_window = min(5, len(co2_values))
+    _trend_x = np.arange(_trend_window, dtype=float)
+    _trend_y = co2_values[-_trend_window:]
+    _trend_slope, _trend_intercept = np.polyfit(_trend_x, _trend_y, 1)
+    # ---------------------------------------------------------------------------
+
     # Rolling history buffer for proper autoregressive lag updates
     _co2_history = list(co2_values)  # all known actuals
 
@@ -343,8 +353,17 @@ def predict_emissions(
                 curr_baseline_features[col_map["co2_roll_5yr"]] = float(np.mean(_co2_history[-5:]))
 
             raw_pred = float(model.predict(curr_baseline_features.reshape(1, -1))[0])
-            # Apply bias correction; clamp to a physically plausible floor
-            pred = max(last_co2 * 0.5, raw_pred + _bias_correction)
+            model_pred_corrected = raw_pred + _bias_correction
+
+            # --- Trend blending ------------------------------------------------
+            # Blend model output with linear trend projection. Blend weight grows
+            # with horizon so longer-range forecasts rely more on the trend.
+            trend_pred = _trend_intercept + _trend_slope * (_trend_window - 1 + i)
+            blend_w = min(0.65, 0.30 + 0.035 * i)  # 0.33 at yr1 -> 0.65 at yr10
+            pred = (1.0 - blend_w) * model_pred_corrected + blend_w * trend_pred
+            pred = max(last_co2 * 0.5, pred)
+            # -------------------------------------------------------------------
+
             prev_baseline_co2 = pred
             _co2_history.append(pred)
 
@@ -363,13 +382,27 @@ def predict_emissions(
             }
 
             if has_scenario:
-                scen_features = _apply_scenario_to_features(
-                    last_features, feature_cols, i,
-                    fossil_fuel_share_change, gdp_growth_rate, population_growth_rate,
-                    prev_co2_pred=prev_scenario_co2 if i > 1 else None,
-                )
-                raw_scen_pred = float(model.predict(scen_features.reshape(1, -1))[0])
-                scen_pred = max(last_co2 * 0.5, raw_scen_pred + _bias_correction)
+                # --- Compound policy delta -------------------------------------
+                # The tree model is insensitive to feature perturbations outside
+                # its training range. Instead, compute a growing annual delta
+                # from the scenario parameters and apply it to the baseline.
+                fossil_effect = 0.0
+                gdp_effect = 0.0
+                pop_effect = 0.0
+
+                if fossil_fuel_share_change is not None:
+                    # Each %-pt change in fossil share drives ~0.8% change in CO2
+                    fossil_effect = (fossil_fuel_share_change / 100.0) * 0.8 * i
+
+                if gdp_growth_rate is not None:
+                    # GDP growth compounds vs BAU (no-growth scenario)
+                    gdp_effect = ((1.0 + gdp_growth_rate / 100.0) ** i - 1.0) * 0.45
+
+                if population_growth_rate is not None:
+                    pop_effect = ((1.0 + population_growth_rate / 100.0) ** i - 1.0) * 0.35
+
+                total_delta_pct = fossil_effect + gdp_effect + pop_effect
+                scen_pred = max(last_co2 * 0.5, pred * (1.0 + total_delta_pct))
                 prev_scenario_co2 = scen_pred
                 scen_uncertainty = co2_std * 0.3 * np.sqrt(i)
                 point["scenario_co2"] = round(scen_pred, 2)
