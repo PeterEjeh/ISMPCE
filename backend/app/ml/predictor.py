@@ -302,6 +302,23 @@ def predict_emissions(
     last_features = df[feature_cols].iloc[-1].values.copy().astype(float)
     last_co2 = float(df["co2"].iloc[-1])
 
+    # --- Bias correction -------------------------------------------------------
+    # The model systematically underpredicts on out-of-sample years. Compute the
+    # mean residual over the last N observed years and add it back each step.
+    _bias_window = min(5, len(df))
+    _X_recent = df[feature_cols].iloc[-_bias_window:].values.astype(float)
+    _y_recent = df["co2"].values[-_bias_window:]
+    if model_name in ("random_forest", "xgboost"):
+        _raw_model = models[model_name]
+        _preds_recent = _raw_model.predict(_X_recent)
+        _bias_correction = float(np.mean(_y_recent - _preds_recent))
+    else:
+        _bias_correction = 0.0
+    # ---------------------------------------------------------------------------
+
+    # Rolling history buffer for proper autoregressive lag updates
+    _co2_history = list(co2_values)  # all known actuals
+
     forecasts = []
 
     if model_name in ("random_forest", "xgboost"):
@@ -313,11 +330,23 @@ def predict_emissions(
         for i in range(1, forecast_horizon + 1):
             year = last_year + i
 
-            if "co2_lag1" in col_map and i > 1:
-                curr_baseline_features[col_map["co2_lag1"]] = prev_baseline_co2
+            # Update ALL autoregressive features from the rolling history buffer
+            if "co2_lag1" in col_map and len(_co2_history) >= 1:
+                curr_baseline_features[col_map["co2_lag1"]] = _co2_history[-1]
+            if "co2_lag2" in col_map and len(_co2_history) >= 2:
+                curr_baseline_features[col_map["co2_lag2"]] = _co2_history[-2]
+            if "co2_lag3" in col_map and len(_co2_history) >= 3:
+                curr_baseline_features[col_map["co2_lag3"]] = _co2_history[-3]
+            if "co2_roll_3yr" in col_map and len(_co2_history) >= 3:
+                curr_baseline_features[col_map["co2_roll_3yr"]] = float(np.mean(_co2_history[-3:]))
+            if "co2_roll_5yr" in col_map and len(_co2_history) >= 5:
+                curr_baseline_features[col_map["co2_roll_5yr"]] = float(np.mean(_co2_history[-5:]))
 
-            pred = float(model.predict(curr_baseline_features.reshape(1, -1))[0])
+            raw_pred = float(model.predict(curr_baseline_features.reshape(1, -1))[0])
+            # Apply bias correction; clamp to a physically plausible floor
+            pred = max(last_co2 * 0.5, raw_pred + _bias_correction)
             prev_baseline_co2 = pred
+            _co2_history.append(pred)
 
             uncertainty = co2_std * 0.3 * np.sqrt(i)
             lower = pred - uncertainty
@@ -339,7 +368,8 @@ def predict_emissions(
                     fossil_fuel_share_change, gdp_growth_rate, population_growth_rate,
                     prev_co2_pred=prev_scenario_co2 if i > 1 else None,
                 )
-                scen_pred = float(model.predict(scen_features.reshape(1, -1))[0])
+                raw_scen_pred = float(model.predict(scen_features.reshape(1, -1))[0])
+                scen_pred = max(last_co2 * 0.5, raw_scen_pred + _bias_correction)
                 prev_scenario_co2 = scen_pred
                 scen_uncertainty = co2_std * 0.3 * np.sqrt(i)
                 point["scenario_co2"] = round(scen_pred, 2)
@@ -362,6 +392,25 @@ def predict_emissions(
         co2_params = scaler_params[scaler_params["feature"] == "co2"].iloc[0]
         co2_min, co2_max = co2_params["min"], co2_params["max"]
 
+        # Compute LSTM bias correction from last 5 observed years (normalized space)
+        _lstm_bias_correction = 0.0
+        try:
+            _norm_recent = df_norm[feature_cols].iloc[-5:].values.copy()
+            _actual_recent = df["co2"].values[-5:]
+            _lstm_resids = []
+            for _k in range(len(_actual_recent)):
+                _inp = _norm_recent[max(0, _k - lookback + 1):_k + 1]
+                if len(_inp) == lookback:
+                    _t = torch.FloatTensor(_inp).unsqueeze(0)
+                    with torch.no_grad():
+                        _pn = model(_t).item()
+                    _pp = _pn * (co2_max - co2_min) + co2_min
+                    _lstm_resids.append(_actual_recent[_k] - _pp)
+            if _lstm_resids:
+                _lstm_bias_correction = float(np.mean(_lstm_resids))
+        except Exception:
+            pass
+
         for i in range(1, forecast_horizon + 1):
             year = last_year + i
 
@@ -369,7 +418,11 @@ def predict_emissions(
             with torch.no_grad():
                 pred_norm = model(input_tensor).item()
 
-            pred = pred_norm * (co2_max - co2_min) + co2_min
+            # Guard against near-zero outputs (LSTM collapse); clamp normalized prediction
+            pred_norm = max(0.05, min(1.0, pred_norm))
+            raw_pred = pred_norm * (co2_max - co2_min) + co2_min
+            # Apply bias correction; clamp to a physically plausible floor
+            pred = max(last_co2 * 0.5, raw_pred + _lstm_bias_correction)
             uncertainty = co2_std * 0.3 * np.sqrt(i)
             lower = pred - uncertainty
             upper = pred + uncertainty
@@ -392,7 +445,7 @@ def predict_emissions(
                     scale += (gdp_growth_rate / 100.0) * 0.35 * (i / 5.0)
                 if population_growth_rate is not None:
                     scale += (population_growth_rate / 100.0) * 0.3 * (i / 5.0)
-                scen_pred = pred * max(0.4, scale)
+                scen_pred = max(last_co2 * 0.5, pred * max(0.4, scale))
                 scen_uncertainty = co2_std * 0.3 * np.sqrt(i)
                 point["scenario_co2"] = round(scen_pred, 2)
                 point["scenario_lower"] = round(max(0, scen_pred - scen_uncertainty), 2)
